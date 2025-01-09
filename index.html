@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+    /* New modern color palette */
+    --primary-bg: #f0f4f8;
+    --panel-bg: #ffffff;
+    --primary-text: #1a365d;
+    --secondary-text: #4a5568;
+    --border-color: #e2e8f0;
+    --hover-bg: #edf2f7;
+    
+    /* Status colors */
+    --red-bg: #fff5f5;
+    --red-text: #e53e3e;
+    --red-border: #feb2b2;
+    
+    --yellow-bg: #fffaf0;
+    --yellow-text: #d69e2e;
+    --yellow-border: #fbd38d;
+    
+    --green-bg: #f0fff4;
+    --green-text: #38a169;
+    --green-border: #9ae6b4;
+    
+    /* Component colors */
+    --progress-bg: #e6e6e6;
+    --progress-fill: #4299e1;
+    
+    /* Box shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Add these new hover effects */
+.panel:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #cbd5e0;
+}
+
+.status-indicator {
+    border-width: 2px;
+    box-shadow: var(--shadow-sm);
+}
+
+.metric-box {
+    box-shadow: var(--shadow-sm);
+}
+
+.metric-box:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--primary-bg);
+            padding: 24px;
+            color: var(--primary-text);
+            line-height: 1.5;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--primary-text);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
+        }
+
+        .panel-title {
+            width: 220px;
+            padding-right: 24px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .panel-title h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-text);
+            margin-bottom: 4px;
+        }
+
+        .panel-title small {
+            color: var(--secondary-text);
+            font-size: 13px;
+        }
+
+        .panel-content {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+            padding-left: 24px;
+            flex-wrap: wrap;
+        }
+
+          /* Application Health Flow specific styles */
+          .app-status-grid {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .app-status-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 60px;
+        }
+
+        .app-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--secondary-text);
+        }
+
+        .status-indicator {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s ease;
+        }
+
+        .status-indicator:hover {
+            transform: scale(1.1);
+        }
+
+        
+
+        .metric-box {
+            background: var(--primary-bg);
+            padding: 16px;
+            border-radius: 8px;
+            min-width: 200px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .metric-box:hover {
+            background: var(--hover-bg);
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        span{
+            font-size: 12px;
+            font-weight: 500;
+            margin: 10px;
+        }
+
+        .status-red { 
+            background: var(--red-bg); 
+            color: var(--red-text);
+        }
+
+        .status-yellow { 
+            background: var(--yellow-bg); 
+            color: var(--yellow-text);
+        }
+
+        .status-green { 
+            background: var(--green-bg); 
+            color: var(--green-text);
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-text);
+            margin: 8px 0;
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: var(--secondary-text);
+            font-weight: 500;
+        }
+
+        .progress-container {
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--progress-bg);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--progress-fill);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--secondary-text);
+        }
+
+        .icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--hover-bg);
+            color: var(--primary-text);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .panel {
+                flex-direction: column;
+            }
+
+            .panel-title {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 16px;
+                margin-bottom: 16px;
+            }
+
+            .panel-content {
+                padding-left: 0;
+            }
+            .app-status-grid {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1 class="dashboard-title">
+            <i class="fas fa-chart-line"></i>
+            Application Health Dashboard
+        </h1>
+
+        <!-- Application Health Flow Panel -->
+        <div class="panel">
+            <div class="panel-title">
+                <h2>Application Health Flow</h2>
+            </div>
+            <div class="panel-content">
+                <div class="app-status-grid">
+                    <div class="app-status-box">
+                        <div class="app-name">MPP</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">DPP</div>
+                        <div class="status-indicator status-red">R</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">ACH</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">RTP</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">FPS</div>
+                        <div class="status-indicator status-red">R</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">EFT</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">UPI</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">STP</div>
+                        <div class="status-indicator status-red">R</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">WRP</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                    <div class="app-status-box">
+                        <div class="app-name">BAP</div>
+                        <div class="status-indicator status-green">G</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">
+                <h2>Health Summary</h2>
+            </div>
+            <div class="panel-content">
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-exclamation-circle icon"></i>
+                        <h3>Critical Events</h3>
+                    </div>
+                                     
+                        <div class="status-badge status-red">0</div> <span>MIM</span>
+   
+                                      
+                        <div class="status-badge status-red">1</div> <span>EMG</span>
+ 
+                </div>
+                
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-bell icon"></i>
+                        <h3>Active Incidents</h3>
+                    </div>
+                    <div class="status-badge status-red">0</div> <span>P1</span>
+                    <div class="status-badge status-red">0</div><span>P2</span>
+                    <div class="status-badge status-red">1</div><span>P3</span>
+                </div>
+
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-tasks icon"></i>
+                        <h3>Change Requests</h3>
+                    </div>
+                    <div class="status-badge status-red">12</div><span>High</span>
+                    <div class="status-badge status-yellow">0</div><span>Med</span>
+                    <div class="status-badge status-green">32</div><span>Low</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- APM Metrics Panel -->
+        <div class="panel">
+            <div class="panel-title">
+                <h2>APM Metrics</h2>
+                <small>Last Six Hours</small>
+            </div>
+            <div class="panel-content">
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Total Transactions</div>
+                        <div class="metric-value">5M</div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-label">Total Errors</div>
+                        <div class="metric-value">676K</div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-label">Avg Response Time</div>
+                        <div class="metric-value">308.12<small>ms</small></div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-label">Avg Errors/min</div>
+                        <div class="metric-value">1882.60</div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-label">Slow Calls/min</div>
+                        <div class="metric-value">268.33</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Infra Metrics Panel -->
+        <div class="panel">
+            <div class="panel-title">
+                <h2>Infra Metrics</h2>
+                <small>Last Six Hours</small>
+                <div class="status-badge status-yellow">28/98</div>
+            </div>
+            <div class="panel-content">
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-microchip icon"></i>
+                        <h3>CPU Usage</h3>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>CPU > 80%</span>
+                            <span>0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-memory icon"></i>
+                        <h3>Memory Usage</h3>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Memory > 80%</span>
+                            <span>28</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 28%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-hdd icon"></i>
+                        <h3>Disk Usage</h3>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Disk > 90%</span>
+                            <span>0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Synthetic Monitoring Panel -->
+        <div class="panel">
+            <div class="panel-title">
+                <h2>Synthetic Monitoring</h2>
+                <small>Last Six Hours</small>
+            </div>
+            <div class="panel-content">
+                <div class="metric-box">
+                    <div class="metric-header">
+                        <i class="fas fa-robot icon"></i>
+                        <h3>Synthetic Monitoring Status</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  
+</body>
+</html>
