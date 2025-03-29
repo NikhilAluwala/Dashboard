@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --secondary-color: #283593;
+            --success-color: #16a34a;
+            --danger-color: #dc2626;
+            --background-color: #f8fafc;
+            --card-shadow: rgba(17, 12, 46, 0.05) 0px 48px 100px 0px;
+            --card-shadow-hover: rgba(17, 12, 46, 0.1) 0px 48px 100px 0px;
+        }
+
+        body {
+            background-color: var(--background-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+            padding-top: 2rem;
+       
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 1rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .navbar-brand {
+            color: white !important;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-section:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0;
+            padding-right: 1rem;
+        }
+
+        .form-select {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .card:hover {
+            box-shadow: var(--hover-shadow);
+            transform: translateY(-2px);
+        }
+
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        }
+
+        .stat-info h3 {
+            color: #1e293b;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-info p {
+            color: #64748b;
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+        }
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background-color: #f8fafc;
+            border-bottom: 2px solid var(--primary-color);
+            color: #475569;
+            font-weight: 600;
+            padding: 1rem;
+        }
+
+        .table tbody tr {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+         /* Modal Improvements */
+         .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: var(--card-shadow);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        #modelFilter {
+            max-width: 250px;
+            margin-left: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        #modelFilter option {
+            color: #1e293b;
+        }
+
+        .selected-model-info .card {
+            box-shadow: var(--card-shadow);
+            border: none;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .selected-model-info .card:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem 1rem 3rem 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            height: 400px;
+        }
+
+        .chart-container:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .chart-canvas-container {
+            position: relative;
+            height: calc(100% - 40px);  /* Subtract title height */
+            width: 100%;
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 1.5rem;
+        }
+
+        select.form-select {
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 0.625rem 2.25rem 0.625rem 0.75rem;
+            background-color: white;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status-success {
+            background-color: rgba(22, 163, 74, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-failed {
+            background-color: rgba(220, 38, 38, 0.1);
+            color: var(--danger-color);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        /* Enhanced DataTable Styling */
+        .dataTables_wrapper {
+            position: relative;
+            width: 100%;
+            overflow-x: auto;
+            --scrollbar-bg: transparent;
+        --scrollbar-color: rgba(203, 213, 225, 0.4);
+        --scrollbar-hover-color: rgba(148, 163, 184, 0.7);
+        
+        }
+
+        .dataTables_wrapper::-webkit-scrollbar {
+        height: 6px;  /* Height for horizontal scrollbar */
+        width: 6px;   /* Width for vertical scrollbar */
+    }
+
+    .dataTables_wrapper::-webkit-scrollbar-track {
+        background: var(--scrollbar-bg);
+        border-radius: 8px;
+    }
+
+    .dataTables_wrapper::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-color);
+        border-radius: 8px;
+        transition: background 0.3s ease;
+    }
+
+    .dataTables_wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-hover-color);
+    }
+
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 1.5rem;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            width: 300px;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .dataTables_wrapper .dataTables_filter input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+
+        .dataTables_wrapper .dataTables_length select {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .dataTables_wrapper .dataTables_info {
+            color: #64748b;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 8px;
+            border: none !important;
+            background: none !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        
+        /* Pagination Styling */
+        .dataTables_paginate {
+            margin-top: 1.5rem !important;
+        }
+
+        .dataTables_paginate .paginate_button {
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.25rem !important;
+            background: white !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .dataTables_paginate .paginate_button:hover {
+            background: #f1f5f9 !important;
+            color: var(--primary-color) !important;
+        }
+
+        .dataTables_paginate .paginate_button.current {
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .dataTables_info {
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+          /* Make tables responsive */
+          .table-responsive {
+            min-height: .01%;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+
+        table.dataTable {
+            border-collapse: separate;
+            border-spacing: 0 12px;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        table.dataTable thead {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+    }
+
+    table.dataTable thead th {
+        background: none;  /* Remove individual column backgrounds */
+        color: white;
+        padding: 1.25rem 1rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);  /* Subtle column separator */
+    }
+
+    table.dataTable thead th:last-child {
+        border-right: none;  /* Remove border from last column */
+    }
+
+    /* Hover effect on entire header */
+    table.dataTable thead:hover {
+        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    }
+
+    table.dataTable tbody tr {
+        background: white;
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+ /* Alternating row colors for better readability */
+ table.dataTable tbody tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+
+    /* Hover effect with slight blue tint */
+    table.dataTable tbody tr:hover {
+        background-color: #f0f7ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+    }
+
+    table.dataTable tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+        table.dataTable tbody td:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+
+        table.dataTable tbody td:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+    }
+
+    .status-success {
+        background-color: rgba(22, 163, 74, 0.1);
+        color: #15803d;
+    }
+
+    .status-failed {
+        background-color: rgba(220, 38, 38, 0.1);
+        color: #b91c1c;
+    }
+
+        .status-success:hover {
+            background-color: rgba(22, 163, 74, 0.15);
+        }
+
+
+        .status-failed:hover {
+            background-color: rgba(220, 38, 38, 0.15);
+        }
+        tr:hover .status-success {
+        background-color: rgba(22, 163, 74, 0.15);
+    }
+
+    tr:hover .status-failed {
+        background-color: rgba(220, 38, 38, 0.15);
+    }
+
+        @media (max-width: 768px) {
+            .summary-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+        }
+
+        .modal-xl {
+            max-width: 95vw;  /* Increased from default */
+            margin: 1.75rem auto;
+        }
+
+        @media (min-width: 1200px) {
+            .modal-xl {
+                max-width: 1400px;  /* Larger on bigger screens */
+            }
+        }
+
+          /* Responsive adjustments for DataTables */
+          @media screen and (max-width: 767px) {
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter {
+                float: none;
+                text-align: left;
+                margin-bottom: 1rem;
+            }
+
+            .dataTables_wrapper .dataTables_filter input {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+            }
+
+            .dataTables_wrapper .dataTables_info {
+                margin-top: 1rem;
+                text-align: left;
+            }
+
+            .dataTables_wrapper .dataTables_paginate {
+                float: none;
+                text-align: center;
+                margin-top: 1rem;
+            }
+
+            .dataTables_wrapper .dataTables_paginate .paginate_button {
+                padding: 0.3rem 0.6rem !important;
+            }
+        }
+         /* Chart Responsiveness */
+         .chart-container {
+            padding: 2rem 1rem 3rem 1rem;
+            height: auto;
+            min-height: 300px;  /* Minimum height for smaller screens */
+        }
+
+        @media screen and (min-width: 768px) {
+            .chart-container {
+                height: 400px;  /* Larger height for bigger screens */
+            }
+        }
+
+        @media screen and (max-width: 767px) {
+            .modal-body {
+                padding: 1rem;
+            }
+
+            .selected-model-info .card {
+                margin-bottom: 1rem;
+            }
+
+            .selected-model-info .row > div {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* Status Badge Responsive Adjustments */
+        @media screen and (max-width: 576px) {
+            .status-badge {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Table Cell Responsive Behavior */
+        @media screen and (max-width: 767px) {
+            table.dataTable tbody td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.875rem;
+            }
+
+            table.dataTable thead th {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Improved Filter Section Responsiveness */
+        @media screen and (max-width: 576px) {
+            .filter-section {
+                padding: 1rem;
+            }
+
+            .filter-section .d-flex {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .filter-label {
+                margin-bottom: 0.5rem;
+            }
+
+            #runCadenceFilter {
+                width: 100% !important;
+            }
+        }
+
+        /* Model Filter Responsive Adjustments */
+        @media screen and (max-width: 767px) {
+            #modelFilter {
+                width: 100%;
+                max-width: 100%;
+                margin: 1rem 0;
+            }
+
+            .modal-header .d-flex {
+                flex-direction: column;
+            }
+
+            .modal-title {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* New Button Styling */
+#toggleDataButton {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    border: none;
+}
+
+#toggleDataButton:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+}
+
+#toggleDataButton:active {
+    transform: translateY(1px);
+}
+
+/* Animation for table transitions */
+.fade-transition {
+    animation: fadeEffect 0.5s ease-in-out;
+}
+
+@keyframes fadeEffect {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Spinner adjustment for API calls */
+.spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    margin-right: 8px;
+}
+
+@media (max-width: 576px) {
+  .d-flex {
+    flex-direction: column; /* Stack items vertically */
+    align-items: stretch; /* Make items take full width */
+  }
+  .custom-btn{
+    margin-top: 10px;
+  }
+ 
+}
+/* Add this to your CSS section */
+.status-cards-container {
+  /* margin: 1.5rem 0; */
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+}
+
+.status-heading {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.4rem;
+  font-size: 1.15rem;
+}
+
+.status-cards-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.status-metric-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background-color: var(--card-accent);
+}
+
+.status-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.status-metric-card.active {
+  box-shadow: 0 0 0 2px var(--card-accent);
+}
+
+.status-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.status-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.clear-filters {
+  display: none;
+  border: none;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.clear-filters.visible {
+  display: inline-block;
+}
+
+.clear-filters:hover {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .status-cards-wrapper {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .status-metric-card {
+    padding: 1.25rem;
+  }
+  
+  .status-value {
+    font-size: 2rem;
+  }
+}
+
+
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid p-4">
+<!-- Filter Section - Add the new button -->
+<div class="filter-section mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <!-- Group the label and dropdown -->
+    <div class="d-flex align-items-center">
+      <label class="filter-label me-2" for="runCadenceFilter">Run Cadence</label>
+      <select id="runCadenceFilter" class="form-select" style="width: 200px;">
+        <option value="">All Run Cadences</option>
+      </select>
+    </div>
+    <!-- Button on the right -->
+    <button id="toggleDataButton" class="btn custom-btn">
+      <span>History Data</span>
+      <i class="fas fa-history ms-2"></i>
+    </button>
+  </div>
+</div>
+
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="summary-stats" id="summaryStats">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Main Table -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <table id="summaryTable" class="table w-100">
+                    <thead>
+                        <tr></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="useCaseModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="d-flex align-items-center w-100">
+                        <h5 class="modal-title"></h5>
+                        <select id="modelFilter" class="form-select ms-auto">
+                            <option value="">Select Model</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="selected-model-info mb-4">
+                        <!-- Dynamic model info will be displayed here -->
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6 class="chart-title">Runtime Trends</h6>
+                                <div class="chart-canvas-container">
+                                    <canvas id="runtimeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6 class="chart-title">SLA Status Distribution</h6>
+                                <div class="chart-canvas-container">
+                                    <canvas id="slaChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-0">
+                                <div class="card-body">
+                                    <table id="detailTable" class="table w-100">
+                                        <thead>
+                                            <tr></tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+
+    <script>
+
+      // --- Global variables - Add these ---
+let isCurrentData = true; // Track which data view is active
+let currentDataTable; // Table for the current data
+   
+        // --- Helper functions for fade effects ---
+        function fadeOut(element) {
+          element.style.transition = "opacity 0.5s ease";
+          element.style.opacity = 0;
+          setTimeout(() => {
+            element.style.display = "none";
+          }, 500);
+        }
+        
+        function fadeIn(element) {
+          element.style.display = "flex";
+          element.style.opacity = 0;
+          setTimeout(() => {
+            element.style.transition = "opacity 0.5s ease";
+            element.style.opacity = 1;
+          }, 10);
+        }
+        
+        // --- Global variables ---
+        let summaryTable, detailTable;
+        let runtimeChart, slaChart;
+        let currentUseCaseData = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+    // Load current data by default
+    loadCurrentData();
+
+    // Add event listener for the toggle button
+    document.getElementById('toggleDataButton').addEventListener('click', toggleDataView);
+
+    // Fetch data every 5 minutes (300,000 milliseconds)
+    setInterval(loadCurrentData, 300000);
+});
+
+// New function to load current data
+function loadCurrentData() {
+  document.querySelectorAll('.loading-overlay').forEach(el => fadeIn(el));
+  
+  // First, fetch unique Run Days for the dropdown
+  fetch('/api/current-data')
+    .then(response => response.json())
+    .then(data => {
+      console.log(data)
+      // Populate the run cadence filter with unique Run Days values
+      const cadences = [...new Set(data.map(item => item['Run Days']))];
+      const filterSelect = document.getElementById('runCadenceFilter');
+      filterSelect.innerHTML = '<option value="">All Run Cadences</option>';
+      cadences.forEach(cadence => {
+        filterSelect.insertAdjacentHTML('beforeend', `<option value="${cadence}">${cadence}</option>`);
+      });
+      
+      // Hide summary stats when showing current data
+      document.getElementById('summaryStats').style.display = 'none';
+
+      // Remove any existing status cards
+      const existingCards = document.querySelector('.status-cards-container');
+      if (existingCards) {
+        existingCards.remove();
+      }
+      
+      // // Add clear filter button to the filter section
+      // if (!document.querySelector('.clear-filters')) {
+      //   const filterSection = document.querySelector('.filter-section .d-flex.justify-content-between');
+      //   filterSection.insertAdjacentHTML('beforeend', '<span class="clear-filters">Clear Filters</span>');
+      // }
+
+      const orderedColumns = [
+        { title: 'Model Name', data: 'Model Name' },
+        { title: 'ModelId', data: 'ModelId' },
+        { title: 'Current Status', data: 'Current Status' },
+        { title: 'SLA Status for Today', data: 'SLA Status for Today' },
+        { title: 'Run Days', data: 'Run Days' },
+        { title: 'Expected StartTime/EndTime', data: 'Expected StartTime/EndTime' },
+        { title: 'Defined SLA', data: 'Defined SLA' },
+        { title: '2025-02-02 SLA Status', data: '2025-02-02 SLA Status' },
+        { title: 'DeploymentDate', data: 'DeploymentDate' }
+      ];
+      
+      // Initialize or refresh the current data table
+      if ($.fn.DataTable.isDataTable('#summaryTable')) {
+        $('#summaryTable').DataTable().destroy();
+        $('#summaryTable').empty();
+      }
+      
+      // Initialize DataTables for current data with columns.name
+      currentDataTable = $('#summaryTable').DataTable({
+        columns: orderedColumns.map(col => ({
+          ...col,
+          name: col.title // Add name property for easier column targeting
+        })),
+        data: data,
+        responsive: true,
+        pageLength: 10,
+        order: [[0, 'asc']],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+        language: {
+          search: "",
+          searchPlaceholder: "Search...",
+          lengthMenu: "Show _MENU_ entries",
+          info: "Showing _START_ to _END_ of _TOTAL_ entries",
+          infoEmpty: "Showing 0 to 0 of 0 entries",
+          infoFiltered: "(filtered from _MAX_ total entries)"
+        },
+        responsive: {
+          details: {
+            type: 'column',
+            target: 'tr'
+          }
+        },
+        drawCallback: function() {
+          // Add animation class to table
+          document.querySelector('#summaryTable').closest('.card').classList.add('fade-transition');
+        }
+      });
+      
+      // Create status cards
+      createStatusCards(data);
+      
+      // Fade out the loading overlay
+      document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
+    })
+    .catch(error => {
+      console.error('Error loading current data:', error);
+      document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
+      alert('Failed to load current data. Please try again.');
+    });
+} 
+        // Update the summary statistics in the DOM.
+        function updateSummaryStats(data) {
+          const totalRuns = data.reduce((acc, item) => acc + item.Number_of_Runs, 0);
+         const totalModels = data.reduce((acc, item) => acc + item.No_of_Models , 0);
+         const totalPassed = data.reduce((acc, item) => acc + item['SLA Passed'] , 0);
+         const totalFailed = data.reduce((acc, item) => acc + item.SLA_Failed , 0);
+          
+          const statsHtml = `
+            <div class="stat-card">
+              <div class="stat-info">
+                <h3>${totalRuns}</h3>
+                <p>Total Runs</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h3>${totalModels}</h3>
+                <p>Total Models</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h3>${totalPassed}</h3>
+                <p>SLA Passed</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h3>${totalFailed}</h3>
+                <p>SLA Failed</p>
+              </div>
+            </div>
+          `;
+          
+          // Replace jQuery’s .html() with innerHTML.
+          document.getElementById('summaryStats').innerHTML = statsHtml;
+        }
+        
+       // Modified loadSummaryData function to handle animations
+function loadSummaryData() {
+  document.querySelectorAll('.loading-overlay').forEach(el => fadeIn(el));
+  
+  fetch('/api/summary')
+    .then(response => response.json())
+    .then(data => {
+      // Show and update the summary stats
+      document.getElementById('summaryStats').style.display = 'grid';
+      updateSummaryStats(data);
+      
+      // Populate the run cadence filter
+      const cadences = [...new Set(data.map(item => item.Run_Cadence))];
+      const filterSelect = document.getElementById('runCadenceFilter');
+      filterSelect.innerHTML = '<option value="">All Run Cadences</option>';
+      cadences.forEach(cadence => {
+        filterSelect.insertAdjacentHTML('beforeend', `<option value="${cadence}">${cadence}</option>`);
+      });
+  // NEW: Destroy any existing DataTable instance on "#summaryTable"
+  if ($.fn.DataTable.isDataTable('#summaryTable')) {
+    $('#summaryTable').DataTable().destroy();
+    $('#summaryTable').empty();
+  }
+  
+      
+      if (data.length > 0) {
+        // if (summaryTable) {
+        //   summaryTable.destroy();
+        // }
+
+        
+        
+        // Initialize DataTables
+        // (existing code remains the same)
+        const columnKeys = Object.keys(data[0]).reverse();
+        const columns = columnKeys.map(key => ({
+          title: key.replace(/_/g, ' '),
+          data: key,
+          render: function(data, type, row) {
+            if (key === 'SLA_Status') {
+              return `<span class="status-badge ${data === 'Passed' ? 'status-success' : 'status-failed'}">${data}</span>`;
+            }
+            return data;
+          }
+        }));
+
+        const orderedColumns = [
+        { title: 'No_of_Models', data: 'No_of_Models' },
+        { title: 'Use_Case', data: 'Use_Case' },
+        { title: 'Run_Cadence', data: 'Run_Cadence' },
+        { title: 'Number_of_Runs', data: 'Number_of_Runs' },
+        { title: 'SLA Passed', data: 'SLA Passed' },
+        { title: 'Comments', data: 'Comments' },
+      ];
+        
+        summaryTable = $('#summaryTable').DataTable({
+          columns: orderedColumns,
+          data: data,
+          responsive: true,
+          pageLength: 10,
+          order: [[0, 'asc']],
+          dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+          language: {
+            search: "",
+            searchPlaceholder: "Search...",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)"
+          },
+          responsive: {
+            details: {
+              type: 'column',
+              target: 'tr'
+            }
+          },
+          drawCallback: function() {
+            // Add animation class to table
+            document.querySelector('#summaryTable').closest('.card').classList.add('fade-transition');
+          }
+        });
+      }
+      
+      // Fade out the loading overlay
+      document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
+    })
+    .catch(error => {
+      console.error('Error loading summary data:', error);
+      document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
+      alert('Failed to load history data. Please try again.');
+    });
+}
+        
+// Update DataTables row click event to work with both tables
+$('#summaryTable').on('click', 'tr', function() {
+  const tableData = isCurrentData ? currentDataTable : summaryTable;
+  if (!tableData) return;
+  
+  const data = tableData.row(this).data();
+  if (data && data.Use_Case) {
+    showUseCaseDetails(data.Use_Case);
+  }
+});
+        
+        // Show details for a specific use case.
+        function showUseCaseDetails(useCase) {
+          // Update modal title.
+          document.querySelector('.modal-title').textContent = useCase;
+          // Show loading overlay.
+          document.querySelectorAll('.loading-overlay').forEach(el => fadeIn(el));
+        
+          fetch(`/api/usecase/${encodeURIComponent(useCase)}`)
+            .then(response => response.json())
+            .then(data => {
+              currentUseCaseData = data;
+              
+              // Populate the model filter.
+              const models = [...new Set(data.map(item => item.Model_Name))];
+              const modelSelect = document.getElementById('modelFilter');
+              modelSelect.innerHTML = '';
+              modelSelect.insertAdjacentHTML('beforeend', '<option value="">Select Model</option>');
+              models.forEach(model => {
+                modelSelect.insertAdjacentHTML('beforeend', `<option value="${model}">${model}</option>`);
+              });
+
+             // Define columns in specific order
+      const orderedColumns = [
+        { title: 'Use_Case', data: 'Use_Case' },
+        { title: 'Model_Name', data: 'Model_Name' },
+        { title: 'Date', data: 'Date' },
+        { title: 'Start_Time', data: 'Start_Time' },
+        { title: 'End_Time', data: 'End_Time' },
+        { title: 'Runtime', data: 'Runtime' },
+        { title: 'Job_Status', data: 'Job_Status' },
+        { title: 'SLA_Status', data: 'SLA_Status' },
+        { title: 'SLA_Missed_Time', data: 'SLA_Missed_Time' }
+      ];
+
+        
+              // Initialize the detail DataTable if needed.
+              if (!detailTable) {
+                const columns = Object.keys(data[0]).reverse().map(key => ({
+                  title: key.replace(/_/g, ' '),
+                  data: key,
+                  render: function(data, type, row) {
+                    if (key === 'SLA_Status' || key === 'Job_Status') {
+                      const status = data.toLowerCase();
+                      const statusClass = (status === 'passed' || status === 'success') ? 'status-success' : 'status-failed';
+                      return `<span class="status-badge ${statusClass}">${data}</span>`;
+                    }
+                    return data;
+                  }
+                }));
+
+            
+        
+                detailTable = $('#detailTable').DataTable({
+                  columns: orderedColumns,
+                  responsive: true,
+                  pageLength: 5,
+                  dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+                  language: {
+                    search: "",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "Showing 0 to 0 of 0 entries",
+                    infoFiltered: "(filtered from _MAX_ total entries)"
+                  },
+                  responsive: {
+                    details: {
+                      type: 'column',
+                      target: 'tr'
+                    }
+                  }
+                });
+              }
+        
+              // Select the first model by default and trigger its change event.
+              if (models.length > 0) {
+                modelSelect.value = models[0];
+                modelSelect.dispatchEvent(new Event('change'));
+              }
+        
+              // Show the modal. (If you’re using Bootstrap 5, you can use its vanilla JS API.)
+              var modalEl = document.getElementById('useCaseModal');
+              var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+              modal.show();
+        
+              document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
+            });
+        }
+        
+        // Update charts and the detail table for a given model.
+        function updateChartsForModel(modelName) {
+          if (!currentUseCaseData) return;
+        
+          const modelData = currentUseCaseData.filter(item => item.Model_Name === modelName);
+          const dates = [...new Set(modelData.map(item => item.Date))].sort();
+        
+          // Update the selected model info.
+          document.querySelector('.selected-model-info').innerHTML = `
+            <div class="card">
+              <div class="card-body">
+                <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Model Performance Summary</h6>
+                <div class="row">
+                  <div class="col-md-4">
+                    <p class="mb-1 text-muted">Success Rate</p>
+                    <h5>${(modelData.filter(item => item.SLA_Status === 'Passed').length / modelData.length * 100).toFixed(1)}%</h5>
+                  </div>
+                  <div class="col-md-4">
+                    <p class="mb-1 text-muted">Average Runtime</p>
+                    <h5>${(modelData.reduce((acc, item) => acc + item.Runtime, 0) / modelData.length).toFixed(2)} hours</h5>
+                  </div>
+                  <div class="col-md-4">
+                    <p class="mb-1 text-muted">Total Runs</p>
+                    <h5>${modelData.length}</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        
+          // (Re)create the runtime chart.
+          if (runtimeChart) {
+            runtimeChart.destroy();
+          }
+          const ctx1 = document.getElementById('runtimeChart').getContext('2d');
+          runtimeChart = new Chart(ctx1, {
+            type: 'line',
+            data: {
+              labels: dates,
+              datasets: [{
+                label: 'Runtime (hours)',
+                data: dates.map(date => {
+                  const entry = modelData.find(item => item.Date === date);
+                  return entry ? entry.Runtime : null;
+                }),
+                borderColor: '#2563eb',
+                backgroundColor: '#2563eb',
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  titleColor: '#000',
+                  bodyColor: '#000',
+                  borderColor: '#ddd',
+                  borderWidth: 1,
+                  padding: 10,
+                  callbacks: {
+                    label: function(context) {
+                      return `Runtime: ${context.parsed.y.toFixed(2)} hours`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: {
+                    maxRotation: 45,
+                    minRotation: 45,
+                    autoSkip: true,
+                    maxTicksLimit: 8,
+                    padding: 10
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { borderDash: [2, 4] },
+                  ticks: {
+                    callback: function(value) { return value.toFixed(1) + 'h'; },
+                    padding: 10
+                  }
+                }
+              },
+              layout: {
+                padding: { left: 10, right: 10, top: 10, bottom: 20 }
+              }
+            }
+          });
+        
+          // Build the SLA status chart.
+          const slaStatus = modelData.reduce((acc, item) => {
+            acc[item.SLA_Status] = (acc[item.SLA_Status] || 0) + 1;
+            return acc;
+          }, {});
+        
+          if (slaChart) {
+            slaChart.destroy();
+          }
+          const ctx2 = document.getElementById('slaChart').getContext('2d');
+          slaChart = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+              labels: ['Passed', 'Failed'],
+              datasets: [{
+                data: [slaStatus['Passed'] || 0, slaStatus['Failed'] || 0],
+                backgroundColor: ['#16a34a', '#dc2626'],
+                borderWidth: 0,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '60%',
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { usePointStyle: true, padding: 20 }
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  titleColor: '#000',
+                  bodyColor: '#000',
+                  borderColor: '#ddd',
+                  borderWidth: 1,
+                  padding: 10,
+                  callbacks: {
+                    label: function(context) {
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const percentage = ((context.parsed / total) * 100).toFixed(1);
+                      return `${context.label}: ${context.parsed} (${percentage}%)`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        
+          // Update the detail DataTable with the filtered data.
+          detailTable.clear().rows.add(modelData).draw();
+        }
+        
+        // Listen for changes on the model filter (vanilla JS version).
+        document.getElementById('modelFilter').addEventListener('change', function() {
+          const selectedModel = this.value;
+          if (selectedModel) {
+            updateChartsForModel(selectedModel);
+          }
+        });
+        
+        // Listen for changes on the run cadence filter.
+ // --- Update the run cadence filter event listener to work with both the table and status cards ---
+// Update the run cadence filter event listener
+document.getElementById('runCadenceFilter').addEventListener('change', function() {
+  const selectedCadence = this.value;
+  document.querySelectorAll('.status-metric-card').forEach(c => {
+        c.classList.remove('active');
+      });
+    currentDataTable.search('').columns().search('').draw();
+       
+    if (isCurrentData && currentDataTable) {
+      // Correct column reference for current data
+      currentDataTable.search(selectedCadence).draw();
+      updateStatusCardsFromFilteredData();
+    } else if (!isCurrentData && summaryTable) {
+    		
+    summaryTable.search(selectedCadence).draw();
+    // Update summary stats for the filtered data
+    const filteredData = summaryTable.rows({ search: 'applied' }).data().toArray();
+    updateSummaryStats(filteredData);
+
+
+    }
+  });
+// --- New function to update status cards based on filtered data ---
+function updateStatusCardsFromFilteredData() {
+  if (!currentDataTable) return;
+  
+  // Get the filtered data
+  const filteredData = currentDataTable.rows({ search: 'applied' }).data().toArray();
+  
+  // Reset status counts, including the new SLA statuses
+  const statusCounts = {
+    'In_progress': 0,
+    'Completed': 0,
+    'No_Run': 0, 
+    'Not_Started': 0,
+    'SLA_Missed': 0,
+    'SLA_Passed': 0,
+    'SLA_Not_Applicable': 0
+  };
+  
+  // Count statuses in filtered data
+  filteredData.forEach(item => {
+    // Process Current Status
+    const statuses = item['Current Status'].split(':');
+
+    // Check for each status independently (a record can count for multiple statuses)
+    if (statuses.includes('In_progress')) {
+      statusCounts['In_progress']++;
+    } else {
+      if (statuses.includes('Completed')) {
+        statusCounts['Completed']++;
+      }
+      if (statuses.includes('No_Run')) {
+        statusCounts['No_Run']++;
+      }
+      if (statuses.includes('Not_Started')) {
+        statusCounts['Not_Started']++;
+      }
+    }
+    
+    const slaStatus = item['SLA Status for Today'];
+    
+    if (slaStatus.includes('Missed')) {
+      statusCounts['SLA_Missed']++;
+    }
+    if (slaStatus.includes('Passed')) {
+      statusCounts['SLA_Passed']++;
+    }
+    if (slaStatus.includes('Not_Applicable')) {
+      statusCounts['SLA_Not_Applicable']++;
+    }
+  });
+  
+  // Update the status card values
+  document.querySelectorAll('.status-metric-card').forEach(card => {
+    const statusId = card.dataset.filter;
+    console.log(statusId)
+     // Get the appropriate count based on the card's ID
+     let count = 0;
+    
+    // This switch statement maps the filter values to the correct statusCounts key
+    switch(statusId) {
+      case 'In_progress':
+      case 'Completed':
+      case 'No_Run':
+      case 'Not_Started':
+        count = statusCounts[statusId];
+        break;
+      case 'Missed':
+        count = statusCounts['SLA_Missed'];
+        break;
+      case 'Passed':
+        count = statusCounts['SLA_Passed'];
+        break;
+      case 'Not_Applicable':
+        count = statusCounts['SLA_Not_Applicable'];
+        break;
+      default:
+        count = 0;
+    }
+    card.querySelector('.status-value').textContent = count;
+  });
+}
+
+        
+        // Adjust charts and DataTables on window resize.
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(function() {
+            // Check if the modal is visible (using vanilla JS instead of jQuery).
+            const modalVisible = document.getElementById('useCaseModal').classList.contains('show');
+            try {
+              if (modalVisible) {
+                if (runtimeChart && document.getElementById('runtimeChart')) {
+                  runtimeChart.resize();
+                }
+                if (slaChart && document.getElementById('slaChart')) {
+                  slaChart.resize();
+                }
+              }
+              // DataTables adjustments (using their jQuery API as before).
+              if (summaryTable && $.fn.DataTable.isDataTable('#summaryTable')) {
+                summaryTable.columns.adjust().responsive.recalc();
+              }
+              if (detailTable && $.fn.DataTable.isDataTable('#detailTable')) {
+                detailTable.columns.adjust().responsive.recalc();
+              }
+            } catch (error) {
+              console.warn('Resize adjustment warning:', error);
+            }
+          }, 250);
+        });
+        
+// Function to toggle between current and history data
+function toggleDataView() {
+  const button = document.getElementById('toggleDataButton');
+  const buttonText = button.querySelector('span');
+  const buttonIcon = button.querySelector('i');
+  
+  // Add loading indicator to button
+  button.disabled = true;
+  button.innerHTML = `<div class="spinner spinner-small"></div> Loading...`;
+  
+  // Remove any existing status cards
+  const existingCards = document.querySelector('.status-cards-container');
+  if (existingCards) {
+    existingCards.remove();
+  }
+  
+  // Hide clear filters button
+  const clearFiltersBtn = document.querySelector('.clear-filters');
+  if (clearFiltersBtn) {
+    clearFiltersBtn.classList.remove('visible');
+  }
+  
+  if (isCurrentData) {
+    // Switch to history data
+    loadSummaryData();
+    setTimeout(() => {
+      buttonText.textContent = 'View Current Data';
+      buttonIcon.className = 'fas fa-clock ms-2';
+      button.disabled = false;
+      button.innerHTML = `<span>View Current Data</span><i class="fas fa-clock ms-2"></i>`;
+    }, 500);
+  } else {
+    // Switch to current data
+    loadCurrentData();
+    setTimeout(() => {
+      buttonText.textContent = 'History Data';
+      buttonIcon.className = 'fas fa-history ms-2';
+      button.disabled = false;
+      button.innerHTML = `<span>History Data</span><i class="fas fa-history ms-2"></i>`;
+    }, 500);
+  }
+  
+  // Toggle the state
+  isCurrentData = !isCurrentData;
+  
+  // Remove animation class after transition completes
+  setTimeout(() => {
+    document.querySelector('#summaryTable').closest('.card').classList.remove('fade-transition');
+  }, 500);
+}
+
+function createStatusCards(data) {
+  // Get unique statuses and count occurrences
+  const statusCounts = {
+    'In_progress': 0,
+    'Completed': 0,
+    'No_Run': 0, 
+    'Not_Started': 0,
+    'SLA_Missed': 0,
+    'SLA_Passed': 0,
+    'SLA_Not_Applicable': 0
+  };
+  
+  data.forEach(item => {
+    // Process Current Status - count for all applicable statuses
+    const statuses = item['Current Status'].split(':');
+    
+    // Check for each status independently (a record can count for multiple statuses)
+    if (statuses.includes('In_progress')) {
+      statusCounts['In_progress']++;
+    } else {
+      if (statuses.includes('Completed')) {
+        statusCounts['Completed']++;
+      }
+      if (statuses.includes('No_Run')) {
+        statusCounts['No_Run']++;
+      }
+      if (statuses.includes('Not_Started')) {
+        statusCounts['Not_Started']++;
+      }
+    }
+    
+    // Process SLA Status
+    const slaStatus = item['SLA Status for Today'];
+    
+    if (slaStatus.includes('Missed')) {
+      statusCounts['SLA_Missed']++;
+    }
+    if (slaStatus.includes('Passed')) {
+      statusCounts['SLA_Passed']++;
+    }
+    if (slaStatus.includes('Not_Applicable')) {
+      statusCounts['SLA_Not_Applicable']++;
+    }
+  });
+  
+  // Check if status cards already exist
+  const existingCards = document.querySelector('.status-cards-container');
+  
+  if (existingCards) {
+    // Just update the counts in existing cards
+    document.querySelectorAll('.status-metric-card').forEach(card => {
+      const statusId = card.dataset.filter;
+      const count = statusCounts[statusId] || 0;
+      card.querySelector('.status-value').textContent = count;
+    });
+    return;
+  }
+  
+  // If cards don't exist, create them
+  let cardsHtml = `
+    <div class="status-cards-container mb-4">
+      <h5 class="status-heading mb-3">Current Status</h5>
+      <div class="status-cards-wrapper">`;
+  
+  // Status cards with simplified design
+  const cardData = [
+    {
+      id: 'In_progress',
+      label: 'In Progress',
+      color: '#4f46e5',
+      column: 'Current Status',
+      filterValue: 'In_progress'
+    },
+    {
+      id: 'Completed',
+      label: 'Completed',
+      color: '#16a34a',
+      column: 'Current Status',
+      filterValue: 'Completed'
+    },
+    {
+      id: 'No_Run',
+      label: 'No Run',
+      color: '#6b7280',
+      column: 'Current Status',
+      filterValue: 'No_Run'
+    },
+    {
+      id: 'Not_Started',
+      label: 'Not Started',
+      color: '#f59e0b',
+      column: 'Current Status',
+      filterValue: 'Not_Started'
+    },
+    {
+      id: 'SLA_Missed',
+      label: 'SLA Missed',
+      color: '#dc2626',
+      column: 'SLA Status for Today',
+      filterValue: 'Missed'
+    },
+    {
+      id: 'SLA_Passed',
+      label: 'SLA Passed',
+      color: '#047857',
+      column: 'SLA Status for Today',
+      filterValue: 'Passed'
+    },
+    {
+      id: 'SLA_Not_Applicable',
+      label: 'SLA Not Applicable',
+      color: '#9ca3af',
+      column: 'SLA Status for Today',
+      filterValue: 'Not_Applicable'
+    }
+  ];
+  
+  cardData.forEach(card => {
+    const count = statusCounts[card.id];
+    // Always show all status cards, even if count is 0
+    cardsHtml += `
+      <div class="status-metric-card" 
+           data-filter="${card.filterValue || card.id}" 
+           data-column="${card.column}"
+           style="--card-accent: ${card.color}">
+        <div class="status-value">${count}</div>
+        <div class="status-label">${card.label}</div>
+      </div>`;
+  });
+  
+  cardsHtml += `
+      </div>
+    </div>`;
+  
+  // Insert cards before the table
+  const tableContainer = document.querySelector('.card.border-0.shadow-sm');
+  tableContainer.insertAdjacentHTML('beforebegin', cardsHtml);
+  
+  // Add event listeners to cards
+  document.querySelectorAll('.status-metric-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+      e.preventDefault(); // Prevent document click from firing immediately
+      
+      const filterValue = this.dataset.filter;
+      const columnName = this.dataset.column;
+      const cadenceFilter = document.getElementById('runCadenceFilter').value;
+      
+      // Mark as active temporarily
+      document.querySelectorAll('.status-metric-card').forEach(c => {
+        c.classList.remove('active');
+      });
+      this.classList.add('active');
+      
+      
+      // Apply the filter
+      if (currentDataTable) {
+        currentDataTable.search('').columns().search('').draw();
+
+        if (cadenceFilter) {
+          currentDataTable.column('Run Days:name')
+                        .search("^" + cadenceFilter + "$", true, false);
+        }
+        
+        currentDataTable.columns().every(function() {
+          const column = this;
+          if (column.header().textContent === columnName) {
+            let filterRegex;
+            console.log(filterValue)
+            if (filterValue === "Completed") {
+              // Match exactly "completed" or "completed:completed:completed" format
+              filterRegex = `^(Completed)(?::Completed)*$`;
+            } else {
+              // Use the standard filtering approach for other statuses
+              filterRegex = filterValue;
+            }
+
+            column.search(filterRegex, true, false).draw();
+          }
+        });
+      }
+    });
+  });
+}
+
+
+// function createStatusCards(data) {
+//   // Get unique statuses and count occurrences
+//   const statusCounts = {
+//     'In_progress': 0,
+//     'Completed': 0,
+//     'No_Run': 0, 
+//     'Not_Started': 0,
+//     'SLA_Missed': 0,
+//     'SLA_Passed': 0,
+//     'SLA_Not_Applicable': 0
+//   };
+  
+//   data.forEach(item => {
+//     // Process Current Status - count for all applicable statuses
+//     const statuses = item['Current Status'].split(':');
+    
+//     // Check for each status independently (a record can count for multiple statuses)
+//     if (statuses.includes('In_progress')) {
+//       statusCounts['In_progress']++;
+//     } else {
+//       if (statuses.includes('Completed')) {
+//         statusCounts['Completed']++;
+//       }
+//       if (statuses.includes('No_Run')) {
+//         statusCounts['No_Run']++;
+//       }
+//       if (statuses.includes('Not_Started')) {
+//         statusCounts['Not_Started']++;
+//       }
+//     }
+    
+//     // Process SLA Status
+//     const slaStatus = item['SLA Status for Today'];
+    
+//     if (slaStatus.includes('Missed')) {
+//       statusCounts['SLA_Missed']++;
+//     }
+//     if (slaStatus.includes('Passed')) {
+//       statusCounts['SLA_Passed']++;
+//     }
+//     if (slaStatus.includes('Not_Applicable')) {
+//       statusCounts['SLA_Not_Applicable']++;
+//     }
+//   });
+  
+//   // Check if status cards already exist
+//   const existingCards = document.querySelector('.status-cards-container');
+  
+//   if (existingCards) {
+//     // Just update the counts in existing cards
+//     document.querySelectorAll('.status-metric-card').forEach(card => {
+//       const statusId = card.dataset.filter;
+      
+//       // Map the filter values to status count keys for SLA statuses
+//       let countKey = statusId;
+//       if (statusId === 'Missed') {
+//         countKey = 'SLA_Missed';
+//       } else if (statusId === 'Passed') {
+//         countKey = 'SLA_Passed';
+//       } else if (statusId === 'Not_Applicable') {
+//         countKey = 'SLA_Not_Applicable';
+//       }
+      
+//       const count = statusCounts[countKey] || 0;
+//       card.querySelector('.status-value').textContent = count;
+//     });
+//     return;
+//   }
+  
+//   // Define card data for both sections
+//   const currentStatusCards = [
+//     {
+//       id: 'In_progress',
+//       label: 'In Progress',
+//       color: '#4f46e5',
+//       column: 'Current Status',
+//       filterValue: 'In_progress'
+//     },
+//     {
+//       id: 'Completed',
+//       label: 'Completed',
+//       color: '#16a34a',
+//       column: 'Current Status',
+//       filterValue: 'Completed'
+//     },
+//     {
+//       id: 'No_Run',
+//       label: 'No Run',
+//       color: '#6b7280',
+//       column: 'Current Status',
+//       filterValue: 'No_Run'
+//     },
+//     {
+//       id: 'Not_Started',
+//       label: 'Not Started',
+//       color: '#f59e0b',
+//       column: 'Current Status',
+//       filterValue: 'Not_Started'
+//     }
+//   ];
+  
+//   const slaStatusCards = [
+//     {
+//       id: 'SLA_Missed',
+//       label: 'Missed',
+//       color: '#dc2626',
+//       column: 'SLA Status for Today',
+//       filterValue: 'Missed'
+//     },
+//     {
+//       id: 'SLA_Passed',
+//       label: 'Passed',
+//       color: '#047857',
+//       column: 'SLA Status for Today',
+//       filterValue: 'Passed'
+//     },
+//     {
+//       id: 'SLA_Not_Applicable',
+//       label: 'Not Applicable',
+//       color: '#9ca3af',
+//       column: 'SLA Status for Today',
+//       filterValue: 'Not_Applicable'
+//     }
+//   ];
+
+//   // Create HTML for both sections
+//   let cardsHtml = `<div class="status-cards-container mb-4">`;
+  
+//   // Current Status section
+//   cardsHtml += `
+//     <h5 class="status-heading mb-3">Current Status</h5>
+//     <div class="status-cards-wrapper mb-4">`;
+  
+//   currentStatusCards.forEach(card => {
+//     const count = statusCounts[card.id];
+//     cardsHtml += `
+//       <div class="status-metric-card" 
+//            data-filter="${card.filterValue || card.id}" 
+//            data-column="${card.column}"
+//            style="--card-accent: ${card.color}">
+//         <div class="status-value">${count}</div>
+//         <div class="status-label">${card.label}</div>
+//       </div>`;
+//   });
+  
+//   cardsHtml += `</div>`;
+  
+//   // SLA Status section
+//   cardsHtml += `
+//     <h5 class="status-heading mb-3">SLA Status</h5>
+//     <div class="status-cards-wrapper">`;
+  
+//   slaStatusCards.forEach(card => {
+//     const count = statusCounts[card.id];
+//     cardsHtml += `
+//       <div class="status-metric-card" 
+//            data-filter="${card.filterValue || card.id}" 
+//            data-column="${card.column}"
+//            style="--card-accent: ${card.color}">
+//         <div class="status-value">${count}</div>
+//         <div class="status-label">${card.label}</div>
+//       </div>`;
+//   });
+  
+//   cardsHtml += `
+//     </div>
+//   </div>`;
+  
+//   // Insert cards before the table
+//   const tableContainer = document.querySelector('.card.border-0.shadow-sm');
+//   tableContainer.insertAdjacentHTML('beforebegin', cardsHtml);
+  
+//   // Add event listeners to cards
+//   document.querySelectorAll('.status-metric-card').forEach(card => {
+//     card.addEventListener('click', function(e) {
+//       e.preventDefault(); // Prevent document click from firing immediately
+      
+//       const filterValue = this.dataset.filter;
+//       const columnName = this.dataset.column;
+//       const cadenceFilter = document.getElementById('runCadenceFilter').value;
+      
+//       // Mark as active temporarily
+//       document.querySelectorAll('.status-metric-card').forEach(c => {
+//         c.classList.remove('active');
+//       });
+//       this.classList.add('active');
+      
+//       // Apply the filter
+//       if (currentDataTable) {
+//         currentDataTable.search('').columns().search('').draw();
+
+//         if (cadenceFilter) {
+//           currentDataTable.column('Run Days:name')
+//                         .search("^" + cadenceFilter + "$", true, false);
+//         }
+        
+//         currentDataTable.columns().every(function() {
+//           const column = this;
+//           if (column.header().textContent === columnName) {
+//             let filterRegex;
+//             console.log(filterValue);
+//             if (filterValue === "Completed") {
+//               // Match exactly "completed" or "completed:completed:completed" format
+//               filterRegex = `^(Completed)(?::Completed)*$`;
+//             } else {
+//               // Use the standard filtering approach for other statuses
+//               filterRegex = filterValue;
+//             }
+
+//             column.search(filterRegex, true, false).draw();
+//           }
+//         });
+//       }
+//     });
+//   });
+// }
+
+// // Also update this function to work with the new structure
+// function updateStatusCardsFromFilteredData() {
+//   if (!currentDataTable) return;
+  
+//   // Get the filtered data
+//   const filteredData = currentDataTable.rows({ search: 'applied' }).data().toArray();
+  
+//   // Reset status counts
+//   const statusCounts = {
+//     'In_progress': 0,
+//     'Completed': 0,
+//     'No_Run': 0, 
+//     'Not_Started': 0,
+//     'SLA_Missed': 0,
+//     'SLA_Passed': 0,
+//     'SLA_Not_Applicable': 0
+//   };
+  
+//   // Count statuses in filtered data
+//   filteredData.forEach(item => {
+//     // Process Current Status
+//     const statuses = item['Current Status'].split(':');
+
+//     // Check for each status independently (a record can count for multiple statuses)
+//     if (statuses.includes('In_progress')) {
+//       statusCounts['In_progress']++;
+//     } else {
+//       if (statuses.includes('Completed')) {
+//         statusCounts['Completed']++;
+//       }
+//       if (statuses.includes('No_Run')) {
+//         statusCounts['No_Run']++;
+//       }
+//       if (statuses.includes('Not_Started')) {
+//         statusCounts['Not_Started']++;
+//       }
+//     }
+    
+//     // Process SLA Status using includes() for more flexible matching
+//     const slaStatus = item['SLA Status for Today'];
+    
+//     if (slaStatus.includes('Missed')) {
+//       statusCounts['SLA_Missed']++;
+//     }
+//     if (slaStatus.includes('Passed')) {
+//       statusCounts['SLA_Passed']++;
+//     }
+//     if (slaStatus.includes('Not_Applicable')) {
+//       statusCounts['SLA_Not_Applicable']++;
+//     }
+//   });
+  
+//   // Update the status card values
+//   document.querySelectorAll('.status-metric-card').forEach(card => {
+//     const statusId = card.dataset.filter;
+//     console.log(statusId);
+    
+//     // Map the filter values to status count keys for SLA statuses
+//     let countKey = statusId;
+//     if (statusId === 'Missed') {
+//       countKey = 'SLA_Missed';
+//     } else if (statusId === 'Passed') {
+//       countKey = 'SLA_Passed';
+//     } else if (statusId === 'Not_Applicable') {
+//       countKey = 'SLA_Not_Applicable';
+//     }
+    
+//     const count = statusCounts[countKey] || 0;
+//     card.querySelector('.status-value').textContent = count;
+//   });
+// }
+
+  
+
+
+        </script>
+        
+</body>
+</html>
