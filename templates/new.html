@@ -718,6 +718,7 @@
   gap: 1rem;
 }
 
+
 .status-metric-card {
   display: flex;
   flex-direction: column;
@@ -784,10 +785,11 @@
   color: #1f2937;
 }
 
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .status-cards-wrapper {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
   
   .status-metric-card {
@@ -799,6 +801,24 @@
   }
 }
 
+.navbar #dataUpdateStatus {
+    font-size: 0.95rem !important; /* Slightly larger */
+    letter-spacing: 0.5px; /* Better uppercase readability */
+    font-weight: 500;
+}
+
+.navbar #dataUpdateStatus i {
+    margin-right: 0.5rem;
+    font-size: 0.9rem; /* Slightly larger icon */
+}
+
+.navbar #dataUpdateStatus.updated {
+    color: #d1f7c4 !important; /* Brighter green for dark navbar */
+}
+
+.navbar #dataUpdateStatus.error {
+    color: #ff9e9e !important; /* Brighter red for dark navbar */
+}
 
     </style>
 </head>
@@ -809,13 +829,26 @@
     </div>
 
     <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <!-- <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
             </a>
         </div>
-    </nav>
+    </nav> -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container-fluid">
+          <a class="navbar-brand" href="#">
+              <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+          </a>
+          <div class="d-flex align-items-center">
+              <div id="dataUpdateStatus" class="text-white text-uppercase fw-bold" style="font-size: 0.95rem; letter-spacing: 0.5px;">
+                  <i class="fas fa-circle-notch fa-spin me-2"></i>
+                  <span class="status-text">Loading Intial Data...</span>
+              </div>
+          </div>
+      </div>
+  </nav>
 
     <!-- Main Content -->
     <div class="container-fluid p-4">
@@ -944,7 +977,46 @@ let currentDataTable; // Table for the current data
         let summaryTable, detailTable;
         let runtimeChart, slaChart;
         let currentUseCaseData = null;
-        
+        let lastUpdateTimestamp = null;
+
+function updateNavStatus(message, status) {
+    const element = document.getElementById('dataUpdateStatus');
+    const icon = element.querySelector('i');
+    
+    // Clear classes
+    element.className = 'text-white small';
+    icon.className = 'fas me-1';
+    
+    // Set status
+    switch(status) {
+        case 'loading':
+            icon.classList.add('fa-circle-notch', 'fa-spin');
+            break;
+        case 'success':
+            icon.classList.add('fa-check');
+            element.classList.add('updated');
+            lastUpdateTimestamp = Date.now();
+            break;
+        case 'error':
+            icon.classList.add('fa-exclamation-triangle');
+            element.classList.add('error');
+            break;
+    }
+    
+    element.querySelector('.status-text').textContent = message;
+}
+
+function formatLocalTime(timestamp) {
+    if (!timestamp) return "NEVER UPDATED";
+    const options = { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+    };
+    return `${new Date(timestamp).toLocaleTimeString(undefined, options).toUpperCase()}`;
+}
+
+
         document.addEventListener('DOMContentLoaded', function() {
     // Load current data by default
     loadCurrentData();
@@ -958,13 +1030,15 @@ let currentDataTable; // Table for the current data
 
 // New function to load current data
 function loadCurrentData() {
+
   document.querySelectorAll('.loading-overlay').forEach(el => fadeIn(el));
+  updateNavStatus('UPDATING...', 'loading');
   
   // First, fetch unique Run Days for the dropdown
   fetch('/api/current-data')
     .then(response => response.json())
     .then(data => {
-      console.log(data)
+      updateNavStatus(`UPDATED: ${formatLocalTime(Date.now())}`, 'success');
       // Populate the run cadence filter with unique Run Days values
       const cadences = [...new Set(data.map(item => item['Run Days']))];
       const filterSelect = document.getElementById('runCadenceFilter');
@@ -1046,7 +1120,8 @@ function loadCurrentData() {
     .catch(error => {
       console.error('Error loading current data:', error);
       document.querySelectorAll('.loading-overlay').forEach(el => fadeOut(el));
-      alert('Failed to load current data. Please try again.');
+      // alert('Failed to load current data. Please try again.');
+      updateNavStatus(`UPDATE FAILED (${formatLocalTime(lastUpdateTimestamp)})`, 'error');
     });
 } 
         // Update the summary statistics in the DOM.
@@ -1443,34 +1518,77 @@ $('#summaryTable').on('click', 'tr', function() {
         // Listen for changes on the run cadence filter.
  // --- Update the run cadence filter event listener to work with both the table and status cards ---
 // Update the run cadence filter event listener
+// document.getElementById('runCadenceFilter').addEventListener('change', function() {
+//   const selectedCadence = this.value;
+//   document.querySelectorAll('.status-metric-card').forEach(c => {
+//         c.classList.remove('active');
+//       });
+//     currentDataTable.search('').columns().search('').draw();
+//     const runCadenceColumnIndex = 4;
+       
+//     if (isCurrentData && currentDataTable) {
+//       currentDataTable.search(selectedCadence).draw();
+//       updateStatusCardsFromFilteredData();
+//     } else if (!isCurrentData && summaryTable) {
+    		
+//     summaryTable.search(selectedCadence).draw();
+//     // Update summary stats for the filtered data
+//     const filteredData = summaryTable.rows({ search: 'applied' }).data().toArray();
+//     updateSummaryStats(filteredData);
+
+
+//     }
+//   });
+
 document.getElementById('runCadenceFilter').addEventListener('change', function() {
   const selectedCadence = this.value;
+  
+  // Remove active class from status cards
   document.querySelectorAll('.status-metric-card').forEach(c => {
-        c.classList.remove('active');
-      });
-    currentDataTable.search('').columns().search('').draw();
-       
-    if (isCurrentData && currentDataTable) {
-      // Correct column reference for current data
+    c.classList.remove('active');
+  });
+  
+  // Clear all existing searches
+  currentDataTable.search('').columns().search('').draw();
+  
+  if (isCurrentData && currentDataTable) {
+    if (selectedCadence === 'Tue-Sat') {
+      // Use exact match for Tues-Sat using the same approach as your second snippet
+      currentDataTable.column('Run Days:name')
+        .search("^" + selectedCadence + "$", true, false)
+        .draw();
+    } else {
+      // For all other cadences, use partial search
       currentDataTable.search(selectedCadence).draw();
-      updateStatusCardsFromFilteredData();
-    } else if (!isCurrentData && summaryTable) {
-    		
-    summaryTable.search(selectedCadence).draw();
+    }
+    
+    updateStatusCardsFromFilteredData();
+  } else if (!isCurrentData && summaryTable) {
+    if (selectedCadence === 'Tues-Sat') {
+      // Use exact match for Tues-Sat in summary table
+      summaryTable.column('Run Days:name')
+        .search("^" + selectedCadence + "$", true, false)
+        .draw();
+    } else {
+      // For all other cadences, use partial search
+      summaryTable.search(selectedCadence).draw();
+    }
+    
     // Update summary stats for the filtered data
     const filteredData = summaryTable.rows({ search: 'applied' }).data().toArray();
     updateSummaryStats(filteredData);
+  }
+});
 
 
-    }
-  });
+
 // --- New function to update status cards based on filtered data ---
 function updateStatusCardsFromFilteredData() {
   if (!currentDataTable) return;
   
   // Get the filtered data
   const filteredData = currentDataTable.rows({ search: 'applied' }).data().toArray();
-  
+
   // Reset status counts, including the new SLA statuses
   const statusCounts = {
     'In_progress': 0,
@@ -1484,6 +1602,7 @@ function updateStatusCardsFromFilteredData() {
   
   // Count statuses in filtered data
   filteredData.forEach(item => {
+  
     // Process Current Status
     const statuses = item['Current Status'].split(':');
 
@@ -1518,7 +1637,6 @@ function updateStatusCardsFromFilteredData() {
   // Update the status card values
   document.querySelectorAll('.status-metric-card').forEach(card => {
     const statusId = card.dataset.filter;
-    console.log(statusId)
      // Get the appropriate count based on the card's ID
      let count = 0;
     
@@ -1794,7 +1912,7 @@ function createStatusCards(data) {
           const column = this;
           if (column.header().textContent === columnName) {
             let filterRegex;
-            console.log(filterValue)
+            
             if (filterValue === "Completed") {
               // Match exactly "completed" or "completed:completed:completed" format
               filterRegex = `^(Completed)(?::Completed)*$`;

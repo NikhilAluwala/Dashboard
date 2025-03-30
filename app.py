@@ -1,24 +1,68 @@
 from flask import Flask, jsonify, request, render_template
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import pandas as pd
 import threading
 import time
 from datetime import datetime
 import os
-import logging
 import numpy as np
+import atexit
 
-# Basic logging setup
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# MongoDB Connection
+class MongoDBConnection:
+    def __init__(self, uri, db_name, max_pool_size=20, min_pool_size=5, timeout=30000):
+        self.uri = uri
+        self.db_name = db_name
+        self.client = None
+        self.db = None
+        self.max_pool_size = max_pool_size
+        self.min_pool_size = min_pool_size
+        self.timeout = timeout
+        self.connect()
+    
+    def connect(self):
+        try:
+            # Configure for read-only operations with optimized pool size
+            self.client = MongoClient(
+                self.uri,
+                maxPoolSize=self.max_pool_size,
+                minPoolSize=self.min_pool_size,
+                connectTimeoutMS=self.timeout,
+                serverSelectionTimeoutMS=self.timeout,
+                waitQueueTimeoutMS=self.timeout,
+                # Lower pool size since only read operations
+                readPreference='secondaryPreferred'  # Prefer reading from secondary nodes if available
+            )
+            # Test the connection
+            self.client.admin.command('ping')
+            self.db = self.client[self.db_name]
+            print("MongoDB connection established successfully")
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            print(f"MongoDB connection failed: {e}")
+            raise
+    
+    def get_collection(self, collection_name):
+        if self.db is None:
+            self.connect()
+        return self.db[collection_name]
+    
+    def close(self):
+        if self.client:
+            self.client.close()
+            print("MongoDB connection closed")
+
+# Initialize MongoDB connection - smaller pool size for read-only dashboard
 mongo_uri = "mongodb://admin:admin@192.168.56.10:27017/?authSource=admin"
-client = MongoClient(mongo_uri)
-db = client["mydatabase"]
-collection = db["models"]
+mongodb = MongoDBConnection(mongo_uri, "mydatabase", max_pool_size=20, min_pool_size=5)
+
+# Register close function to be called on application shutdown
+def close_mongo_connection():
+    mongodb.close()
+
+atexit.register(close_mongo_connection)
 
 class DataCache:
     def __init__(self, excel_file='data.xlsx', check_interval=10):
@@ -51,9 +95,9 @@ class DataCache:
                 self.last_update = datetime.now()
                 self.last_modified = os.path.getmtime(self.excel_file)
             
-            logger.info("Cache refreshed successfully")
+            print("Cache refreshed successfully")
         except Exception as e:
-            logger.error(f"Cache refresh failed: {e}")
+           print(f"Cache refresh failed: {e}")
 
     def _start_refresh_thread(self):
         def check_and_refresh():
@@ -61,10 +105,10 @@ class DataCache:
                 try:
                     current_mtime = os.path.getmtime(self.excel_file)
                     if current_mtime != self.last_modified:
-                        logger.info("File changed, refreshing cache")
+                        print("File changed, refreshing cache")
                         self.refresh_cache()
                 except Exception as e:
-                    logger.error(f"Refresh thread error: {e}")
+                    print(f"Refresh thread error: {e}")
                 finally:
                     time.sleep(self.check_interval)
         
@@ -83,10 +127,13 @@ cache = DataCache()
 @app.route('/api/current-data')
 def get_current_data():
     try:
-        data = list(collection.find({}, {"_id": 0}))  # Exclude ObjectId
+        collection = mongodb.get_collection("models")
+        # For read-only operations, we can use a cursor more efficiently
+        cursor = collection.find({}, {"_id": 0})
+        data = list(cursor)
         return jsonify(data)
     except Exception as e:
-        logger.error(f"MongoDB fetch error: {e}")
+        print(f"MongoDB fetch error: {e}")
         return jsonify({'error': 'Failed to fetch data from MongoDB'}), 500
 
 # API endpoints
@@ -107,16 +154,14 @@ def get_usecase(usecase_name):
         return jsonify({'error': 'Use case not found'}), 404
     return jsonify(data)
 
-@app.route('/api/cache-status')
-def get_cache_status():
-    return jsonify({
-        'last_update': cache.last_update.strftime('%Y-%m-%d %H:%M:%S') if cache.last_update else 'Never',
-        'file_path': cache.excel_file
-    })
 
 @app.route('/')
 def home():
     return render_template('new.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    try:
+        app.run(host='0.0.0.0', port=5550)
+    finally:
+        # Ensure connections are closed when app shuts down
+        close_mongo_connection()

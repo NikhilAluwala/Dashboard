@@ -1,0 +1,18 @@
+python -m venv venv
+
+app.py, change debug=true to keep host and port
+
+sudo chmod -R 755 venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+^C(venv) vagrant@Master:/opt/Dashboard$ cat requirements.txt
+flask
+pymongo
+pandas
+openpyxl
+
+nohup python3 app.py > flask.log 2>&1 &
+ps aux | grep app.py
+

@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, render_template
+from pymongo import MongoClient
 import pandas as pd
 import threading
 import time
@@ -12,6 +13,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# MongoDB Connection
+mongo_uri = "mongodb://admin:admin@192.168.56.10:27017/?authSource=admin"
+client = MongoClient(mongo_uri)
+db = client["mydatabase"]
+collection = db["models"]
 
 class DataCache:
     def __init__(self, excel_file='data.xlsx', check_interval=10):
@@ -28,41 +35,22 @@ class DataCache:
 
     def refresh_cache(self):
         try:
-            # Read all Excel sheets
-            all_sheets = pd.read_excel(
-                self.excel_file,
-                sheet_name=None,
-                engine='openpyxl',
-                na_filter=False
-            )
+            xls = pd.ExcelFile(self.excel_file, engine='openpyxl')
+            sheet_names = xls.sheet_names
             
             new_cache = {}
-            for name, df in all_sheets.items():
-                # Clean column names and data
-                df.columns = df.columns.str.strip()
-                
-                # Handle NaN values properly
-                df = df.replace({np.nan: None})
-                
-                # Clean string values
-                str_columns = df.select_dtypes(include=['object']).columns
-                for col in str_columns:
-                    df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
-                
-                # Handle date columns if they exist
-                date_columns = ['Date', 'Start_Time', 'End_Time']
-                for col in date_columns:
-                    if col in df.columns:
-                        df[col] = df[col].apply(lambda x: str(x) if pd.notna(x) else None)
-                
-                # Convert to records
-                new_cache[name.strip()] = df.to_dict('records')
+            for sheet_name in sheet_names:
+                df = pd.read_excel(self.excel_file, sheet_name=sheet_name)
+                if not df.empty:
+                    df.columns = df.columns.str.strip()
+                    df = df.replace({np.nan: None})
+                    new_cache[sheet_name.strip()] = df.to_dict('records')
             
             with self.lock:
                 self.cache = new_cache
                 self.last_update = datetime.now()
                 self.last_modified = os.path.getmtime(self.excel_file)
-                
+            
             logger.info("Cache refreshed successfully")
         except Exception as e:
             logger.error(f"Cache refresh failed: {e}")
@@ -79,7 +67,7 @@ class DataCache:
                     logger.error(f"Refresh thread error: {e}")
                 finally:
                     time.sleep(self.check_interval)
-
+        
         thread = threading.Thread(target=check_and_refresh, daemon=True)
         thread.start()
 
@@ -89,8 +77,17 @@ class DataCache:
                 return self.cache.get(sheet, [])
             return self.cache
 
-# Initialize cache
+# Initialize cache for Excel data
 cache = DataCache()
+
+@app.route('/api/current-data')
+def get_current_data():
+    try:
+        data = list(collection.find({}, {"_id": 0}))  # Exclude ObjectId
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"MongoDB fetch error: {e}")
+        return jsonify({'error': 'Failed to fetch data from MongoDB'}), 500
 
 # API endpoints
 @app.route('/api/summary')
@@ -99,10 +96,7 @@ def get_summary():
     data = cache.get_data('Summary')
     
     if cadence:
-        data = [
-            row for row in data 
-            if row.get('Run_Cadence', '').lower() == cadence.lower()
-        ]
+        data = [row for row in data if row.get('Run_Cadence', '').lower() == cadence.lower()]
     
     return jsonify(data)
 
@@ -125,4 +119,4 @@ def home():
     return render_template('new.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port=5550)
